@@ -232,7 +232,7 @@ TEST(Waypoint_Manager, DesiredTrackForOrbit) {
     int turnDirection[2] = {0, 1}; // 0 = CW, 1 = CCW
     int altitude[2] = {78, 110};
 
-    _WaypointStatus circling_start_check_1 = waypointManagerInstance->start_circling(setup1, turnRadius[0], turnDirection[0], altitude[0], false); // Sets circling
+    _WaypointStatus circling_start_check_1 = waypointManagerInstance->start_hovering(setup1, turnRadius[0], turnDirection[0], altitude[0], false); // Sets circling
 
     _WaypointStatus get_directions_check_1 = waypointManagerInstance->get_next_directions(input1, out1);
 
@@ -244,7 +244,7 @@ TEST(Waypoint_Manager, DesiredTrackForOrbit) {
     _OutputStatus test1_center = compare_coordinates(center_ans1, response);
     _OutputStatus test1_output = compare_output_data(ans1, out1);
 
-    _WaypointStatus circling_start_check_2 = waypointManagerInstance->start_circling(setup2, turnRadius[1], turnDirection[1], altitude[1], false); // Sets circling
+    _WaypointStatus circling_start_check_2 = waypointManagerInstance->start_hovering(setup2, turnRadius[1], turnDirection[1], altitude[1], false); // Sets circling
 
     _WaypointStatus get_directions_check_2 =waypointManagerInstance->get_next_directions(input2, out2);
 
@@ -1621,4 +1621,3 @@ TEST(Waypoint_Manager, updateMiddleElement) {
     EXPECT_EQ(initialize_check, WAYPOINT_SUCCESS);  
     EXPECT_EQ(update_success_check, WAYPOINT_SUCCESS);  
 }
-

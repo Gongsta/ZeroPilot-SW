@@ -39,11 +39,19 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
 
         // Depending on the waypointType of the waypoint, we will need to call a different initialize_waypoint() method
         _PathData * modifyWaypoint;
+        #if DUBINS_PATH
         if (waypointType == PATH_FOLLOW) {
             modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType); 
         } else {
             modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType, telemetryData->waypoints[0].turnRadius); // Create a _PathData object
         }
+        #else // Since we are using a drone, PATH_FOLLOW AND HOLD_WAYPOINT will be initialized the same way (no turn radius)
+        if (waypointType == ORBIT_FOLLOW) { // Don't know if we need to have an orbit follow for drone but we threw it in there 
+            modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType, telemetryData->waypoints[0].turnRadius); // Create a _PathData object
+        } else {
+            modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType); 
+        }
+        #endif
         
         // Update flight path by passing in the appropriate parameters to update_path_nodes()
         if (telemetryData->waypointModifyFlightPathCommand == APPEND) { // Append
@@ -97,11 +105,19 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
             }
             
             // Depending on the waypointType of the waypoint, we will need to call a different initialize_waypoint() method
+            #if DUBINS_PATH
             if (waypointType == PATH_FOLLOW) {
                 newFlightPath[i] = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[i].longitude, telemetryData->waypoints[i].latitude, telemetryData->waypoints[i].altitude, waypointType); 
             } else {
                 newFlightPath[i] = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[i].longitude, telemetryData->waypoints[i].latitude, telemetryData->waypoints[i].altitude, waypointType, telemetryData->waypoints[i].turnRadius); 
             }
+            #else
+            if (waypointType == ORBIT_FOLLOW) {
+                newFlightPath[i] = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[i].longitude, telemetryData->waypoints[i].latitude, telemetryData->waypoints[i].altitude, waypointType, telemetryData->waypoints[i].turnRadius); 
+            } else {
+                newFlightPath[i] = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[i].longitude, telemetryData->waypoints[i].latitude, telemetryData->waypoints[i].altitude, waypointType); 
+            }
+            #endif
 
             appendNewElement(idArray, newFlightPath[i]->waypointId); // Append elements to the idArray while we go :))
         }
@@ -113,8 +129,12 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
             waypointType = HOLD_WAYPOINT; // Set the output type of the new waypoint. Need if statements because of the enum parameter of the initialize_waypoint() method
 
             // The homebase will be a hold waypoint, so no selection required!
+            #if DUBINS_PATH 
             _PathData * newHomeBase = cruisingStateManager.initialize_waypoint(telemetryData->homebase.longitude, telemetryData->homebase.latitude, telemetryData->homebase.altitude, waypointType, telemetryData->homebase.turnRadius); 
-    
+            #else 
+            _PathData * newHomeBase = cruisingStateManager.initialize_waypoint(telemetryData->homebase.longitude, telemetryData->homebase.latitude, telemetryData->homebase.altitude, waypointType); 
+            #endif
+
             editingStatus = cruisingStateManager.initialize_flight_path(newFlightPath, telemetryData->numWaypoints, newHomeBase);
         } else { // Only initializing the flight path
             editingStatus = cruisingStateManager.initialize_flight_path(newFlightPath, telemetryData->numWaypoints);
@@ -129,7 +149,7 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
         cruisingStateManager.clear_path_nodes();
         clearArray(idArray);
     } else if (telemetryData->numWaypoints != 0) { // Incorrect commands from telemetry
-        // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our plane will behave as expected
+        // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our aircraft will behave as expected
         telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT; 
         telemetryData->numWaypoints = 0; 
         telemetryData->initializingHomeBase = 0; 
@@ -137,7 +157,7 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
         return MODIFY_CRUISING_INCORRECT_TELEMETRY_COMMAND;
     }
 
-    // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our plane will behave as expected
+    // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our aircraft will behave as expected
     telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT; 
     telemetryData->numWaypoints = 0; 
     telemetryData->initializingHomeBase = 0; 
@@ -163,7 +183,8 @@ _GetNextDirectionsErrorCode pathFollow(Telemetry_PIGO_t * telemetryData, Waypoin
 
     } else if (telemetryData->waypointNextDirectionsCommand == TOGGLE_HOLDING) { // Holding pattern
 
-        pathFollowingStatus = cruisingStateManager.start_circling(input, telemetryData->holdingTurnRadius, telemetryData->holdingTurnDirection, telemetryData->holdingAltitude, inHold);
+        //TODO: Check if code fails for drone (i.e. when telemetry does not specify holdingTurnRadius and holdingTurnDirection)
+        pathFollowingStatus = cruisingStateManager.start_hovering(input, telemetryData->holdingTurnRadius, telemetryData->holdingTurnDirection, telemetryData->holdingAltitude, inHold);
 
         output->desiredAirspeed = CRUISING_AIRSPEED;
         
@@ -175,7 +196,7 @@ _GetNextDirectionsErrorCode pathFollow(Telemetry_PIGO_t * telemetryData, Waypoin
         }
     } else if (telemetryData->waypointNextDirectionsCommand == TOGGLE_HEAD_HOME) { // Heading home
 
-        // Sees if the plane is currently going home. If it is, then we will cancel. Else, start going home
+        // Sees if the aircraft is currently going home. If it is, then we will cancel. Else, start going home
         if (goingHome) {
             goingHome = false;
         } else {
@@ -193,12 +214,12 @@ _GetNextDirectionsErrorCode pathFollow(Telemetry_PIGO_t * telemetryData, Waypoin
             pathFollowingStatus = WAYPOINT_SUCCESS;
         }
     } else { // Incorrect commands from telemetry
-        telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT; // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our plane will behave as expected
+        telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT; // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our aircraft will behave as expected
         
         return PATH_CRUISING_INCORRECT_TELEMETRY_COMMAND;
     }
 
-    telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT;  // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our plane will behave as expected
+    telemetryData->waypointModifyFlightPathCommand = NO_FLIGHT_PATH_EDIT;  // Set important values to their defaults. This will ensure that if the telemetry struct is not change, our aircraft will behave as expected
 
     // Return appropriate error code
     if (pathFollowingStatus == WAYPOINT_SUCCESS) {
@@ -290,5 +311,3 @@ void clearArray(uint16_t * idArray) {
         idArray[i] = 0;
     }
 }
-
-

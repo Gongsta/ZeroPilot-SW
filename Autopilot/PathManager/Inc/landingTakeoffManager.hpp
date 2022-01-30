@@ -36,7 +36,7 @@ constexpr static double DISTANCE_OF_TAKEOFF {1000}; // in meters, just used to a
 
 struct _LandingPath //this structure is used to hold the waypoint data of the landing path, when it is created in the transition stage
 {
-    _PathData stoppingPoint; //contains the path data to the stopping point, which is at the end of the landing when the plane comes to a stop
+    _PathData stoppingPoint; //contains the path data to the stopping point, which is at the end of the landing when the aircraft comes to a stop
     _PathData aimingPoint; //contains the path data to the aiming point, which is where the slope of the aircraft meets the surface of the ground
     _PathData intersectionPoint; //contains the path data to the intersection point, which is where the slope of the aircraft intersects with the current altitude of the aircraft
 };
@@ -68,7 +68,7 @@ class LandingTakeoffManager{
 
         /*
             This function takes the horizontal position of the aircraft and determines the desired altitude
-            Projects the position to the vertical plane relative to the aimingPoint, intersectionPoint, and stoppingPoint
+            Projects the position to the vertical aircraft relative to the aimingPoint, intersectionPoint, and stoppingPoint
             Takes the one of the horizontal coordinates, plug it into the equation of the slope, get an altitude
 
             @param SFOutput_t * input - this variable will hold the sensor fusion data which is used to calculate current position
@@ -123,7 +123,7 @@ class LandingTakeoffManager{
          * TAKEOFF FUNCTIONS
          *****************/
         /*
-            This function returns the desired rotation speed limit, where the plane will transition from roll to climb
+            This function returns the desired rotation speed limit, where the aircraft will transition from roll to climb
 
             @param bool * ifPackage - this boolean holds if there is a package on board the aircraft
 
@@ -140,7 +140,7 @@ class LandingTakeoffManager{
         */
         static double desiredClimbSpeed(bool ifPackage);
         /*
-            This function returns a waypoint that the plane should follow horizontally
+            This function returns a waypoint that the aircraft should follow horizontally
             This waypoint does not have a vertical component, as max throttle is kept throughout the climb
 
             @param long double * currentLatitude - this variable holds the current latitude value of the aircraft
@@ -148,7 +148,7 @@ class LandingTakeoffManager{
             @param float * currentAltitude - this variable holds the current altitude of the aircraft
             @param float * takeoffDirection - this variable holds the takeoffDirection of the aircraft
 
-            @return _PathData - this structure holds the climb point, which the plane will follow until it exits at a certain altitude
+            @return _PathData - this structure holds the climb point, which the aircraft will follow until it exits at a certain altitude
         */
         static _PathData createTakeoffWaypoint(double currentLatitude, double currentLongitude, float currentAltitude, float takeoffDirection);
 

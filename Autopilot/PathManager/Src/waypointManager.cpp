@@ -138,7 +138,7 @@ _PathData* WaypointManager::initialize_waypoint() {
     nextAssignedId++; // Increment ID so next waypoint has a different one
     waypoint->latitude = -1;
     waypoint->longitude = -1;
-    waypoint->altitude = 10; // Sets this to 10 as a default so plane does not crash. This can be changed by state machine.
+    waypoint->altitude = 10; // Sets this to 10 as a default so aircraft does not crash. This can be changed by state machine.
     waypoint->waypointType = PATH_FOLLOW;
     waypoint->turnRadius = -1;
     // Set next and previous waypoints to empty for now
@@ -273,12 +273,14 @@ _WaypointStatus WaypointManager::get_next_directions(_WaypointManager_Data_In cu
     float currentTrack = (float) currentStatus.track;
 
     // Holding is given higher priority to heading home
-    if (inHold) { // If plane is currently circling and waiting for commands
+    if (inHold) { // If aircraft is currently hovering and waiting for commands
         // Checks if parameters are valid. If state machine gets this error it should immediately cancel the hold because output data will not be updated while the parameters are incorrect
+        #if DUBINS_PATH
         if(turnRadius <= 0 || (turnDirection != -1 && turnDirection != 1)) { 
             errorCode = INVALID_PARAMETERS;
             return errorCode;
         }
+        #endif
 
         // Sets position array
         position[0] = currentStatus.longitude;
@@ -300,7 +302,7 @@ _WaypointStatus WaypointManager::get_next_directions(_WaypointManager_Data_In cu
     get_coordinates(currentStatus.longitude, currentStatus.latitude, position);
     position[2] = (float) currentStatus.altitude;
 
-    if (goingHome) { // If plane was instructed to go back to base (and is awaiting for waypointBuffer to be updated)
+    if (goingHome) { // If aircraft was instructed to go back to base (and is awaiting for waypointBuffer to be updated)
         if (homeBase == nullptr) {
             errorCode = UNDEFINED_PARAMETER;
             return errorCode;
@@ -368,8 +370,9 @@ void WaypointManager::update_return_data(_WaypointManager_Data_Out *Data) {
     Data->out_type = outputType;
 }
 
-_WaypointStatus WaypointManager::start_circling(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelTurning) {
-    if (!cancelTurning) {
+#if DUBINS_PATH
+_WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelHovering) {
+    if (!cancelHovering) {
         // If parameters are not valid. Minimum altitude of 10 metres
         if (radius <= 0 || (direction != 0 && direction != 1) || altitude < 10) { // SHOULD I JUST SET THIS TO DEFAULT VALUES INSTEAD??????
             return INVALID_PARAMETERS; 
@@ -436,6 +439,29 @@ _WaypointStatus WaypointManager::start_circling(_WaypointManager_Data_In current
     return WAYPOINT_SUCCESS;
 }
 
+#else
+_WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelHovering) {
+    if (!cancelHovering) {
+        // If parameters are not valid. Minimum altitude of 10 metres. We are expecting the turn radius and direction to be null 
+        if (radius != NULL || (direction != NULL) || altitude < 10) { // SHOULD I JUST SET THIS TO DEFAULT VALUES INSTEAD??????
+            return INVALID_PARAMETERS; 
+        }
+
+        inHold = true; // Sets holding indicator to true
+
+        // Update turnCenter (will be the same coordinates since we are hovering in place, but we might want to update the hovering altitude)
+        turnCenter[2] = altitude;
+        get_coordinates(currentStatus.longitude, currentStatus.latitude, turnCenter); 
+
+        get_coordinates(RAD_TO_DEG(turnCenter[0]), RAD_TO_DEG(turnCenter[1]), turnCenter);
+    } else {
+        inHold = false;
+    }
+
+    return WAYPOINT_SUCCESS;
+}
+#endif
+
 _HeadHomeStatus WaypointManager::head_home(bool startHeadingHome) {
     if (homeBase == nullptr) { // Checks if home waypoint is actually initialized.
         return HOME_UNDEFINED_PARAMETER;
@@ -455,7 +481,7 @@ void WaypointManager::follow_hold_pattern(float* position, float track) {
     // Converts the position array and turnCenter array from radians to an xy coordinate system.
     get_coordinates(position[0], position[1], position);
 
-    // Calls follow_orbit method 
+    // TODO: Calls follow_orbit method for plane .. don't want this for drone
     follow_orbit(position, track);
 }
 
@@ -519,7 +545,7 @@ void WaypointManager::follow_waypoints(_PathData * currentWaypoint, float* posit
     float distanceToWaypoint = sqrt(pow(targetCoordinates[0] - position[0],2) + pow(targetCoordinates[1] - position[1],2) + pow(targetCoordinates[2] - position[2],2));
     distanceToNextWaypoint = distanceToWaypoint; 
 
-    // Checks if plane is orbiting or flying in a straight line
+    // Checks if aircraft is orbiting or flying in a straight line
     if (orbitPathStatus == PATH_FOLLOW) {
         float dotProduct = waypointDirection[0] * (position[0] - halfPlane[0]) + waypointDirection[1] * (position[1] - halfPlane[1]) + waypointDirection[2] * (position[2] - halfPlane[2]);
         
@@ -534,7 +560,7 @@ void WaypointManager::follow_waypoints(_PathData * currentWaypoint, float* posit
                 turnCenter[1] = targetWaypoint->latitude;
                 turnCenter[2] = turnDesiredAltitude;
                 /*
-                    Increment the currentIndex so the plane is not perpetually stuck in a holding pattern
+                    Increment the currentIndex so the aircraft is not perpetually stuck in a holding pattern
                 */
                 currentIndex++; 
             }
@@ -566,9 +592,9 @@ void WaypointManager::follow_waypoints(_PathData * currentWaypoint, float* posit
                 To explain this, I will define three waypoints: A, B, and C. The waypoints are located in adjacent indeces in 
                 the waypointBuffer array in alphabetic order. 
 
-                Let's say that the currentIndex initially pointed at waypoint A, meaning the plane was travelling from A to B. 
-                Since the lines AB and BC are not parallel, the plane needs to execute a (fabulous) turn before reaching waypoint 
-                B so it can travel along line BC. Now, this if statement is triggered when the plane has finished its turn and is 
+                Let's say that the currentIndex initially pointed at waypoint A, meaning the aircraft was travelling from A to B. 
+                Since the lines AB and BC are not parallel, the aircraft needs to execute a (fabulous) turn before reaching waypoint 
+                B so it can travel along line BC. Now, this if statement is triggered when the aircraft has finished its turn and is 
                 now travelling along line BC. 
 
                 As a result, it makes sense that we increment the currentIndex parameter here since now we are targeting waypoint C 
@@ -988,6 +1014,3 @@ WaypointManager::~WaypointManager() {
         clear_path_nodes();
     }
 }
-
-
-

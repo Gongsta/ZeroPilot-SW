@@ -17,6 +17,8 @@
 
 #define PATH_BUFFER_SIZE 100
 
+#define DUBINS_PATH FALSE
+
 constexpr int CRUISING_AIRSPEED {15};
 
 struct _WaypointManager_Data_In {
@@ -112,36 +114,36 @@ public:
     _WaypointStatus get_next_directions(_WaypointManager_Data_In currentStatus, _WaypointManager_Data_Out *Data);
 
     /**
-     * Called if user wants the plane to start circling
+     * Called if user wants the aircraft to start hovering. If the aircraft is an airplane (i.e. DUBINS_PATH == True), then the aircraft will start circling
      *
-     * Even while circling, state machine should call get_next_direction().
-     * When user wants to exit this cycle, user can call this method again and pass in true for cancelTurning. This will set inHold to false.
+     * Even while hovering, state machine should call get_next_direction().
+     * When user wants to exit this cycle, user can call this method again and pass in true for cancelHovering. This will set inHold to false.
      *
      * @param[in] _WaypointManager_Data_in currentStatus -> stores current gps info 
      * @param[in] float radius -> radius of the turn
      * @param[in] int direction -> -1 means clockwise (bank right); 1 means counter-clock wise (bank left)
      * @param[in] int altitude -> altitude of hold pattern
-     * @param[in] bool cancelTurning -> false means we want plane to orbit. True means we want plane to stop orbiting and follow waypointBuffer array
+     * @param[in] bool cancelHovering -> false means we want aircraft to orbit. True means we want aircraft to stop orbiting and follow waypointBuffer array
      */
-    _WaypointStatus start_circling(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelTurning);
+    _WaypointStatus start_hovering(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelHovering);
 
     /**
-     * Called if user wants the plane to just head home
+     * Called if user wants the aircraft to just head home
      *
      * To learn how to use this, refer to the docs: https://uwarg-docs.atlassian.net/wiki/spaces/ZP/pages/1169883137 
      * 
-     *  @param[in] bool startHeadingHome -> true if you want plane to head home, false if you want plane to start following the flight path in waypointBuffer.
+     *  @param[in] bool startHeadingHome -> true if you want aircraft to head home, false if you want aircraft to start following the flight path in waypointBuffer.
      * 
      *  Returns true if goingHome was set to true. Returns false otherwise. Note that if the homeBase parameter is not initialized, this method will return false automatically
      */
     _HeadHomeStatus head_home(bool startHeadingHome);
 
     /**
-     *  Called if user wants to change the waypoint that the plane is currently trying to target. 
-     *  How it works: Say you have waypoint m, n, y, and z. z comes after y. Currently, the plane is at waypoint m and is heading for n, but you want the plane to change and start heading for z. To do this, call this function and pass in the waypointId
+     *  Called if user wants to change the waypoint that the aircraft is currently trying to target. 
+     *  How it works: Say you have waypoint m, n, y, and z. z comes after y. Currently, the aircraft is at waypoint m and is heading for n, but you want the aircraft to change and start heading for z. To do this, call this function and pass in the waypointId
      *  of y. Done!
      * 
-     *  @param[in] int id -> id of the waypoint that we want to set as the current waypoint (the plane will head towards the waypoint that is stored in its "next" parameter)
+     *  @param[in] int id -> id of the waypoint that we want to set as the current waypoint (the aircraft will head towards the waypoint that is stored in its "next" parameter)
      * 
      *  @return -> returns error code in case the transfer was not successful
      */ 
@@ -236,7 +238,7 @@ private:
     //Status variables
     bool goingHome;     // This is set to true when the head_home() function is called.
     _WaypointStatus errorStatus;
-    bool inHold; // Set to true when start_circling() is called
+    bool inHold; // Set to true when start_hovering() is called
     float turnCenter[3];
     int turnDesiredAltitude;
     int turnDirection; // 1 for CW, 2 for CCW
@@ -247,8 +249,8 @@ private:
     void follow_waypoints(_PathData * currentWaypoint, float* position, float track);                               // Determines which of the methods below to call :))
     void follow_line_segment(_PathData * currentWaypoint, float* position, float track);                            // In the instance where the waypoint after the next is not defined, we continue on the path we are currently on
     void follow_last_line_segment(_PathData * currentWaypoint, float* position, float track);                       // In the instance where the next waypoint is not defined, follow previously defined path
-    void follow_orbit(float* position, float track);                                                                // Makes the plane follow an orbit with defined radius and direction
-    void follow_straight_path(float* waypointDirection, float* targetWaypoint, float* position, float track);       // Makes a plane follow a straight path (straight line following)
+    void follow_orbit(float* position, float track);                                                                // Makes the aircraft follow an orbit with defined radius and direction
+    void follow_straight_path(float* waypointDirection, float* targetWaypoint, float* position, float track);       // Makes a aircraft follow a straight path (straight line following)
 
     void update_return_data(_WaypointManager_Data_Out *Data);       // Updates data in the output structure
 
@@ -257,7 +259,7 @@ private:
     *
     * @param[in] long double longitude -> GPS longitide
     * @param[in] long double latitude -> GPS latitude
-    * @param[out] float* xyCoordinates -> Array that will store the x and y coordinates of the plane
+    * @param[out] float* xyCoordinates -> Array that will store the x and y coordinates of the aircraft
     */
     void get_coordinates(long double longitude, long double latitude, float* xyCoordinates);
 
@@ -283,4 +285,3 @@ private:
 };
 
 #endif
-

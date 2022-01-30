@@ -20,7 +20,7 @@ double LandingTakeoffManager::changingAltitude(const SFOutput_t & input, const _
     Vector3D vectorAC(cPoint.x - aPoint.x, cPoint.y - aPoint.y, cPoint.z - aPoint.z); //aiming point --> current point
     Vector3D normalVector;
     
-    //normal of the plane created by aiming, stopping, and intersection point
+    //normal of the aircraft created by aiming, stopping, and intersection point
     normalVector = vectorAI.crossProduct(vectorAS);
 
     //projecting vectorAC to the normal
@@ -29,7 +29,7 @@ double LandingTakeoffManager::changingAltitude(const SFOutput_t & input, const _
 
     projectionACToNormal = normalVector * (normalVector.dotProduct(vectorAC) / pow(normalVector.norm(),2));
 
-    //project point onto plane (cpoint minus the projection)
+    //project point onto aircraft (cpoint minus the projection)
 
     projectedPoint = cPoint - projectionACToNormal;
 
@@ -197,9 +197,3 @@ _PathData LandingTakeoffManager::createTakeoffWaypoint(double currentLatitude, d
 
     return desiredWaypoint;
 }
-
-
-
-
-
-
