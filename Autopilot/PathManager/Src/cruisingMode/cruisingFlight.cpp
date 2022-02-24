@@ -39,12 +39,13 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
 
         // Depending on the waypointType of the waypoint, we will need to call a different initialize_waypoint() method
         _PathData * modifyWaypoint;
-        #if DUBINS_PATH
+        #if IS_FIXED_WING
         if (waypointType == PATH_FOLLOW) {
             modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType); 
         } else {
             modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType, telemetryData->waypoints[0].turnRadius); // Create a _PathData object
         }
+
         #else // Since we are using a drone, PATH_FOLLOW AND HOLD_WAYPOINT will be initialized the same way (no turn radius)
         if (waypointType == ORBIT_FOLLOW) { // Don't know if we need to have an orbit follow for drone but we threw it in there 
             modifyWaypoint = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[0].longitude, telemetryData->waypoints[0].latitude, telemetryData->waypoints[0].altitude, waypointType, telemetryData->waypoints[0].turnRadius); // Create a _PathData object
@@ -105,7 +106,7 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
             }
             
             // Depending on the waypointType of the waypoint, we will need to call a different initialize_waypoint() method
-            #if DUBINS_PATH
+            #if IS_FIXED_WING
             if (waypointType == PATH_FOLLOW) {
                 newFlightPath[i] = cruisingStateManager.initialize_waypoint(telemetryData->waypoints[i].longitude, telemetryData->waypoints[i].latitude, telemetryData->waypoints[i].altitude, waypointType); 
             } else {
@@ -129,9 +130,10 @@ _ModifyFlightPathErrorCode editFlightPath(Telemetry_PIGO_t * telemetryData, Wayp
             waypointType = HOLD_WAYPOINT; // Set the output type of the new waypoint. Need if statements because of the enum parameter of the initialize_waypoint() method
 
             // The homebase will be a hold waypoint, so no selection required!
-            #if DUBINS_PATH 
+            #if IS_FIXED_WING 
             _PathData * newHomeBase = cruisingStateManager.initialize_waypoint(telemetryData->homebase.longitude, telemetryData->homebase.latitude, telemetryData->homebase.altitude, waypointType, telemetryData->homebase.turnRadius); 
             #else 
+            //TODO: Check if drone will properly initialize waypoint for home
             _PathData * newHomeBase = cruisingStateManager.initialize_waypoint(telemetryData->homebase.longitude, telemetryData->homebase.latitude, telemetryData->homebase.altitude, waypointType); 
             #endif
 
@@ -184,7 +186,11 @@ _GetNextDirectionsErrorCode pathFollow(Telemetry_PIGO_t * telemetryData, Waypoin
     } else if (telemetryData->waypointNextDirectionsCommand == TOGGLE_HOLDING) { // Holding pattern
 
         //TODO: Check if code fails for drone (i.e. when telemetry does not specify holdingTurnRadius and holdingTurnDirection)
-        pathFollowingStatus = cruisingStateManager.start_hovering(input, telemetryData->holdingTurnRadius, telemetryData->holdingTurnDirection, telemetryData->holdingAltitude, inHold);
+        #if IS_FIXED_WING
+        pathFollowingStatus = cruisingStateManager.start_circling(input, telemetryData->holdingTurnRadius, telemetryData->holdingTurnDirection, telemetryData->holdingAltitude, inHold);
+        #else
+        pathFollowingStatus = cruisingStateManager.start_hovering(input, telemetryData->holdingAltitude, inHold);
+        #endif
 
         output->desiredAirspeed = CRUISING_AIRSPEED;
         

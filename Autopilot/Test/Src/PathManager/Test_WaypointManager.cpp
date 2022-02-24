@@ -246,7 +246,7 @@ TEST(Waypoint_Manager, DesiredTrackForOrbit) {
 
     _WaypointStatus circling_start_check_2 = waypointManagerInstance->start_hovering(setup2, turnRadius[1], turnDirection[1], altitude[1], false); // Sets circling
 
-    _WaypointStatus get_directions_check_2 =waypointManagerInstance->get_next_directions(input2, out2);
+    _WaypointStatus get_directions_check_2 = waypointManagerInstance->get_next_directions(input2, out2);
 
     response[0] = waypointManagerInstance->orbitCentreLong;
     response[1] = waypointManagerInstance->orbitCentreLat;
@@ -652,6 +652,94 @@ TEST(Waypoint_Manager, DesiredTrackWhenGoingHomeSetTrue) {
 }
 
 
+/************************ TESTING THE HOVERING MODE ************************/
+TEST(Waypoint_Manager, HoverWaypoint) {
+    /***********************SETUP***********************/
+
+    WaypointManager * waypointManagerInstance = new WaypointManager(); // Creates object
+
+    // Stores outputs from four tests
+    _WaypointManager_Data_Out * out1 = new _WaypointManager_Data_Out;
+    _WaypointManager_Data_Out * out2 = new _WaypointManager_Data_Out;
+
+    // Creates two test values!
+    _WaypointManager_Data_In setup1 = {43.467998128, -80.537331184, 100, 100};  // latitude, longitude, altitude, track
+    _WaypointManager_Data_In setup2 = {43.467998128, -80.537331184, 100, 30};  // latitude, longitude, altitude, track
+
+    _WaypointManager_Data_In input1 = {43.467998128, -80.537331184, 100, 100};  // latitude, longitude, altitude, track
+    _WaypointManager_Data_In input2 = {43.467998128, -80.537331184, 100, 30};  // latitude, longitude, altitude, track
+
+    // Stores answers for four tests
+    float center_ans1[3] = {-80.54500000, 43.47138889, 78}; // longitude, latitude, altitude
+    _WaypointManager_Data_Out * ans1 = new _WaypointManager_Data_Out;
+    ans1->desiredTrack = 100;        
+    ans1->desiredAltitude = 78;
+    ans1->distanceToNextWaypoint = 0;
+    ans1->radius = 100;
+    ans1->turnDirection = -1;
+    ans1->errorCode = WAYPOINT_SUCCESS;
+    ans1->isDataNew = true;
+    ans1->timeOfData = 0;
+    ans1->out_type = ORBIT_FOLLOW;
+
+    float center_ans2[3] = {-80.54527778, 43.47250000, 110}; 
+    _WaypointManager_Data_Out * ans2 = new _WaypointManager_Data_Out;
+    ans2->desiredTrack = 30;       
+    ans2->desiredAltitude = 110;
+    ans2->distanceToNextWaypoint = 0;
+    ans2->radius = 30;
+    ans2->turnDirection = 1;
+    ans2->errorCode = WAYPOINT_SUCCESS;
+    ans2->isDataNew = true;
+    ans2->timeOfData = 0;
+    ans2->out_type = ORBIT_FOLLOW;
+
+
+    /********************STEPTHROUGH********************/
+
+    int turnRadius[2] = {100, 30};
+    int turnDirection[2] = {0, 1}; // 0 = CW, 1 = CCW
+    int altitude[2] = {78, 110};
+
+    _WaypointStatus circling_start_check_1 = waypointManagerInstance->start_hovering(setup1, turnRadius[0], turnDirection[0], altitude[0], false); // Sets circling
+
+    _WaypointStatus get_directions_check_1 = waypointManagerInstance->get_next_directions(input1, out1);
+
+    float response[3]; // longitude, latitude
+    response[0] = waypointManagerInstance->orbitCentreLong;
+    response[1] = waypointManagerInstance->orbitCentreLat;
+    response[2] = waypointManagerInstance->orbitCentreAlt;
+
+    _OutputStatus test1_center = compare_coordinates(center_ans1, response);
+    _OutputStatus test1_output = compare_output_data(ans1, out1);
+
+    _WaypointStatus circling_start_check_2 = waypointManagerInstance->start_hovering(setup2, turnRadius[1], turnDirection[1], altitude[1], false); // Sets circling
+
+    _WaypointStatus get_directions_check_2 = waypointManagerInstance->get_next_directions(input2, out2);
+
+    response[0] = waypointManagerInstance->orbitCentreLong;
+    response[1] = waypointManagerInstance->orbitCentreLat;
+    response[2] = waypointManagerInstance->orbitCentreAlt;
+
+    _OutputStatus test2_center = compare_coordinates(center_ans2, response);
+    _OutputStatus test2_output = compare_output_data(ans2, out2);
+
+    delete out1; delete out2; delete ans1; delete ans2; delete waypointManagerInstance;
+
+    /**********************ASSERTS**********************/
+
+    EXPECT_EQ(get_directions_check_1, WAYPOINT_SUCCESS);
+    EXPECT_EQ(get_directions_check_2, WAYPOINT_SUCCESS);
+
+    EXPECT_EQ(circling_start_check_1, WAYPOINT_SUCCESS);
+    EXPECT_EQ(circling_start_check_2, WAYPOINT_SUCCESS);
+
+    EXPECT_EQ(test1_center, OUTPUT_CORRECT);
+    EXPECT_EQ(test1_output, OUTPUT_CORRECT);
+
+    EXPECT_EQ(test2_center, OUTPUT_CORRECT);
+    EXPECT_EQ(test2_output, OUTPUT_CORRECT);
+}
 /************************ TESTING MODIFYING THE FLIGHT PATH ************************/
 
 

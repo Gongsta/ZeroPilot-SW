@@ -37,7 +37,7 @@ typedef struct POGI{
 	bool homeBaseInit; //is home base initialized
 } POGI;
 
-struct Telemetry_PIGO_t {
+struct Telemetry_PIGO_t { //TODO: Rename, because CV and Telemetry will be able to send
     /* Parameters for the waypoint manager (crusingState) */
     int numWaypoints;
     

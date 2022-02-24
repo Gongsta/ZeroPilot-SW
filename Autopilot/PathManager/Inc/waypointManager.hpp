@@ -17,7 +17,7 @@
 
 #define PATH_BUFFER_SIZE 100
 
-#define DUBINS_PATH FALSE
+#define IS_FIXED_WING FALSE
 
 constexpr int CRUISING_AIRSPEED {15};
 
@@ -114,7 +114,7 @@ public:
     _WaypointStatus get_next_directions(_WaypointManager_Data_In currentStatus, _WaypointManager_Data_Out *Data);
 
     /**
-     * Called if user wants the aircraft to start hovering. If the aircraft is an airplane (i.e. DUBINS_PATH == True), then the aircraft will start circling
+     * Called if user wants the aircraft to start hovering. If the aircraft is an airplane (i.e. IS_FIXED_WING == True), then the aircraft will start circling
      *
      * Even while hovering, state machine should call get_next_direction().
      * When user wants to exit this cycle, user can call this method again and pass in true for cancelHovering. This will set inHold to false.

@@ -275,7 +275,7 @@ _WaypointStatus WaypointManager::get_next_directions(_WaypointManager_Data_In cu
     // Holding is given higher priority to heading home
     if (inHold) { // If aircraft is currently hovering and waiting for commands
         // Checks if parameters are valid. If state machine gets this error it should immediately cancel the hold because output data will not be updated while the parameters are incorrect
-        #if DUBINS_PATH
+        #if IS_FIXED_WING
         if(turnRadius <= 0 || (turnDirection != -1 && turnDirection != 1)) { 
             errorCode = INVALID_PARAMETERS;
             return errorCode;
@@ -370,7 +370,7 @@ void WaypointManager::update_return_data(_WaypointManager_Data_Out *Data) {
     Data->out_type = outputType;
 }
 
-#if DUBINS_PATH
+#if IS_FIXED_WING
 _WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelHovering) {
     if (!cancelHovering) {
         // If parameters are not valid. Minimum altitude of 10 metres
@@ -443,7 +443,7 @@ _WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In current
 _WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In currentStatus, float radius, int direction, int altitude, bool cancelHovering) {
     if (!cancelHovering) {
         // If parameters are not valid. Minimum altitude of 10 metres. We are expecting the turn radius and direction to be null 
-        if (radius != NULL || (direction != NULL) || altitude < 10) { // SHOULD I JUST SET THIS TO DEFAULT VALUES INSTEAD??????
+        if (altitude < 10) { // SHOULD I JUST SET THIS TO DEFAULT VALUES INSTEAD??????
             return INVALID_PARAMETERS; 
         }
 
@@ -452,8 +452,6 @@ _WaypointStatus WaypointManager::start_hovering(_WaypointManager_Data_In current
         // Update turnCenter (will be the same coordinates since we are hovering in place, but we might want to update the hovering altitude)
         turnCenter[2] = altitude;
         get_coordinates(currentStatus.longitude, currentStatus.latitude, turnCenter); 
-
-        get_coordinates(RAD_TO_DEG(turnCenter[0]), RAD_TO_DEG(turnCenter[1]), turnCenter);
     } else {
         inHold = false;
     }
@@ -480,9 +478,13 @@ _HeadHomeStatus WaypointManager::head_home(bool startHeadingHome) {
 void WaypointManager::follow_hold_pattern(float* position, float track) {
     // Converts the position array and turnCenter array from radians to an xy coordinate system.
     get_coordinates(position[0], position[1], position);
-
-    // TODO: Calls follow_orbit method for plane .. don't want this for drone
+    
+    #if IS_FIXED_WING
     follow_orbit(position, track);
+    #else
+    follow_point
+    #endif
+
 }
 
 void WaypointManager::follow_waypoints(_PathData * currentWaypoint, float* position, float track) {
